@@ -17,6 +17,9 @@
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+from marshmallow import ValidationError
+
 from superset.charts.schemas import ChartDataQueryContextSchema
 
 
@@ -48,3 +51,25 @@ def test_query_context_schema_accepts_empty_queries(app_context: Any) -> None:
             }
         )
     assert query_context.queries == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"datasource": {"id": 1, "type": "table"}},
+        {"queries": []},
+    ],
+)
+def test_query_context_schema_rejects_missing_required_fields(
+    app_context: Any, payload: dict[str, Any]
+) -> None:
+    """
+    A query-context payload without ``datasource`` or ``queries`` cannot build
+    a QueryContext: the factory requires both as keyword-only arguments. The
+    schema must reject such a payload with a ValidationError (HTTP 400 on
+    POST /api/v1/chart/data) instead of letting the post_load hook raise a
+    raw TypeError, which the endpoint surfaces as HTTP 500.
+    """
+    with pytest.raises(ValidationError):
+        ChartDataQueryContextSchema().load(payload)

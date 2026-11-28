@@ -1708,8 +1708,13 @@ class ChartDataStopSchema(Schema):
 
 class ChartDataQueryContextSchema(Schema):
     query_context_factory: QueryContextFactory | None = None
-    datasource = fields.Nested(ChartDataDatasourceSchema)
-    queries = fields.List(fields.Nested(ChartDataQueryObjectSchema))
+    # Both fields are required: QueryContextFactory.create() takes them as
+    # required keyword-only arguments, so a payload missing either one cannot
+    # build a QueryContext. Declaring them required makes schema.load() raise
+    # a ValidationError (HTTP 400) instead of letting the post_load hook raise
+    # a raw TypeError (HTTP 500).
+    datasource = fields.Nested(ChartDataDatasourceSchema, required=True)
+    queries = fields.List(fields.Nested(ChartDataQueryObjectSchema), required=True)
     custom_cache_timeout = fields.Integer(
         metadata={"description": "Override the default cache timeout"},
         required=False,

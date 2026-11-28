@@ -1009,17 +1009,13 @@ def is_small_number(value: Any) -> bool:
     return abs(float(value)) < 1
 
 
-def configured_small_number_format(
-    config: dict[str, Any], applies: bool
-) -> Optional[str]:
+def configured_small_number_format(config: dict[str, Any]) -> Optional[str]:
     """
     The small-number format a column config sets, or ``None``.
 
-    ``applies`` is false for a chart that ignores the format. A cleared Select
-    leaves a blank string behind, which the browser treats as unset.
+    A cleared Select leaves a blank string behind, which the browser treats
+    as unset.
     """
-    if not applies:
-        return None
     return (config.get("d3SmallNumberFormat") or "").strip() or None
 
 
@@ -1819,12 +1815,9 @@ def table(
         df[currency_column].map(currency_context_value) if currency_column else None
     )
     column_config = form_data.get("column_config") or {}
-    # ``ColumnConfigControl`` offers the small-number format for both plugins,
-    # but the AG Grid table's cells are painted through ``valueFormatter``,
-    # which formats with the column's own formatter and never builds the
-    # small-number one the way ``formatColumnValue`` does. A report leaves that
-    # format alone rather than apply one the chart itself ignores.
-    applies_small_number_format = form_data.get("viz_type") != AG_GRID_TABLE
+    # ``ColumnConfigControl`` offers the small-number format for both table
+    # plugins, and both paint it for cells below one, so a report applies it
+    # the same way rather than leaving the format alone.
 
     def label_of(name: str) -> str:
         """Return the column label as it appears in ``df`` (verbose-renamed)."""
@@ -1926,9 +1919,7 @@ def table(
                 detected_currency,
                 row_currency_context,
                 fallback_to_detected=False,
-                small_d3_format=configured_small_number_format(
-                    own_config, applies_small_number_format
-                ),
+                small_d3_format=configured_small_number_format(own_config),
                 small_currency=own_config.get("currencyFormat"),
             )
             continue
@@ -1975,9 +1966,7 @@ def table(
         # The small-number format has no dataset-level counterpart, and the
         # browser pairs it with the column config's own currency rather than
         # the resolved one, so both come straight from ``config``.
-        small_number_format = configured_small_number_format(
-            config, applies_small_number_format
-        )
+        small_number_format = configured_small_number_format(config)
 
         is_number = pd.api.types.is_numeric_dtype(df[column])
 

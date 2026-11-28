@@ -101,18 +101,32 @@ export const valueFormatter = (
     value !== '' &&
     !(value instanceof DateWithFormatter && isEmptyDateInput(value.input))
   ) {
+    // Mirror formatColumnValue: small numbers (|value| < 1) in numeric
+    // columns use the column's small number format when one is set, so grid
+    // cells match the drill-to-detail display instead of the plain number
+    // format. A null/empty d3SmallNumberFormat falls back to the plain
+    // formatter (getSmallNumberFormatter returns it unchanged).
+    const isSmallNumber =
+      col.dataType === GenericDataType.Numeric &&
+      typeof value === 'number' &&
+      Math.abs(value) < 1;
+    const formatter = isSmallNumber
+      ? getSmallNumberFormatter(
+          col.formatter,
+          col.config?.d3SmallNumberFormat,
+          col.config?.currencyFormat,
+        )
+      : col.formatter;
     // Fall back to String(value) rather than the raw value: value can be a
     // DateWithFormatter/Date (or other object) when col.formatter is unset or
     // returns a falsy result, and returning that raw object here - though it
     // satisfies this function's `: string` signature at compile time since
     // `value`'s param type is loosely typed - crashes React with "Objects are
     // not valid as a React child" once a cell renderer renders it directly.
-    if (col.formatter instanceof CurrencyFormatter) {
-      return (
-        col.formatter(value, data, col.currencyCodeColumn) || String(value)
-      );
+    if (formatter instanceof CurrencyFormatter) {
+      return formatter(value, data, col.currencyCodeColumn) || String(value);
     }
-    return col.formatter?.(value) || String(value);
+    return formatter?.(value) || String(value);
   }
   if (node?.level === -1) {
     return '';

@@ -4092,11 +4092,12 @@ def test_table_small_number_format_ignores_a_saved_currency() -> None:
     assert formatted["amount"].tolist() == ["50.0%", "$ 12.50"]
 
 
-def test_ag_grid_table_ignores_a_small_number_format() -> None:
+def test_ag_grid_table_applies_a_small_number_format() -> None:
     """
-    The AG Grid table paints its cells through ``valueFormatter``, which never
-    builds the small-number formatter, so a report on one keeps the column's
-    normal format for every cell.
+    The AG Grid table paints its cells through ``valueFormatter``, which
+    builds the small-number formatter the way ``formatColumnValue`` does,
+    so a report on one applies the column's small-number format to cells
+    below one, exactly like the classic Table.
     """
     df = pd.DataFrame.from_dict({"amount": {0: 0.5, 1: 12.5}})
     column_config = {
@@ -4116,7 +4117,7 @@ def test_ag_grid_table_ignores_a_small_number_format() -> None:
         {"viz_type": "table", "metrics": ["amount"], "column_config": column_config},
     )
 
-    assert ag_grid["amount"].tolist() == ["0.50", "12.50"]
+    assert ag_grid["amount"].tolist() == ["50.0%", "12.50"]
     assert plain["amount"].tolist() == ["50.0%", "12.50"]
 
 
@@ -4758,8 +4759,8 @@ def test_table_derived_column_takes_its_own_small_number_format() -> None:
     `processComparisonColumns` gives each of the four its own config, and
     `formatColumnValue` uses that config's `d3SmallNumberFormat` for a cell
     below one. The parent metric's small-number format does not reach them,
-    and a blank one is unset. The AG Grid table ignores the format for these
-    columns as it does for any other.
+    and a blank one is unset. Both table viz types apply the format, since
+    the AG Grid table's `valueFormatter` builds it the same way.
     """
     df = pd.DataFrame({"m": [110, 0.5], "m__P1D": [100, 0.25]})
     column_config = {
@@ -4779,8 +4780,10 @@ def test_table_derived_column_takes_its_own_small_number_format() -> None:
     assert formatted["# m"].tolist() == ["100", "0.25"]
     assert formatted["△ m"].tolist() == ["10", "0.25"]
     assert formatted["% m"].tolist() == ["0.10", "100.000%"]
-    assert ag_grid["Main m"].tolist() == ["110", "0.5"]
-    assert ag_grid["% m"].tolist() == ["10.000%", "100.000%"]
+    assert ag_grid["Main m"].tolist() == ["110", "50.0%"]
+    assert ag_grid["# m"].tolist() == ["100", "0.25"]
+    assert ag_grid["△ m"].tolist() == ["10", "0.25"]
+    assert ag_grid["% m"].tolist() == ["0.10", "100.000%"]
 
 
 def test_table_derived_small_number_format_uses_its_own_currency() -> None:

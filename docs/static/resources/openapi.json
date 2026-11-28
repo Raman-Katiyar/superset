@@ -1629,6 +1629,10 @@
             "type": "string"
           }
         },
+        "required": [
+          "datasource",
+          "queries"
+        ],
         "type": "object"
       },
       "ChartDataQueryObject": {
